@@ -1,0 +1,4 @@
+name = "lisa"
+uuid = "e9fcbae8-4250-46aa-8ea6-7f494ac8997c"
+authors = ["Alex Mylnikov <alexmy@lisa-park.com>"]
+version = "0.1.0"
