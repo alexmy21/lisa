@@ -1,27 +1,40 @@
 include("constants.jl")
 
-module lisa
-
     struct HllSet{P}
         counts::Vector{BitSet}
 
         function HllSet{P}() where {P}
+            validate_P(P)
+            n = calculate_n(P)
+            counts = create_bitsets(n)
+            return new(counts)
+        end
+
+        function validate_P(P)
             isa(P, Integer) || throw(ArgumentError("P must be integer"))
             (P < 4 || P > 18) && throw(ArgumentError("P must be between 4 and 18"))
-            return new(zeros(UInt8, sizeof(new([BitSet() for _ in 1:HllSet{P}]))))
+        end
+
+        function calculate_n(P)
+            return 1 << P
+        end
+
+        function create_bitsets(n)
+            return [BitSet() for _ in 1:n]
         end
     end
 
     HllSet{P}(::Type{T}) where {P, T} = HllSet{10}()
 
-    Base.show(io::IO, hll::HllSet) = print(io, "HllSet{", P, "}(", length(hll.counts), ")")
-    Base.sizeof(::Type{HllSet{P}}) where {P}= 1 << P
-    Base.sizeof(hll::HllSet) = sizeof(typeof(hll))
+    Base.show(io::IO, x::HllSet{P}) where {P} = print(io, "HllSet{$(P)}()")
 
-    function Base.update!(dest::HllSet{P}, src::HllSet{P}) where {P}
+    Base.sizeof(::Type{HllSet{P}}) where {P} = 1 << P
+    Base.sizeof(x::HllSet{P}) where {P} = sizeof(typeof(x))
+
+    function Base.union!(dest::HllSet{P}, src::HllSet{P}) where {P}
         length(dest.counts) == length(src.counts) || throw(ArgumentError("HllSet{P} must have same size"))
         for i in 1:length(dest.counts)
-            dest.counts[i] |= src.counts[i]
+            union!(dest.counts[i], src.counts[i])
         end
         return dest
     end
@@ -38,16 +51,16 @@ module lisa
         length(x.counts) == length(y.counts) || throw(ArgumentError("HllSet{P} must have same size"))
         z = HllSet{P}()
         for i in 1:length(x.counts)
-            z.counts[i] = x.counts[i] | y.counts[i]
+            z.counts[i] = union(x.counts[i], y.counts[i])
         end
         return z
     end
 
-    function Base.intersection(x::HllSet{P}, y::HllSet{P}) where {P} 
+    function Base.intersect(x::HllSet{P}, y::HllSet{P}) where {P} 
         length(x.counts) == length(y.counts) || throw(ArgumentError("HllSet{P} must have same size"))
         z = HllSet{P}()
         for i in 1:length(x.counts)
-            z.counts[i] = x.counts[i] & y.counts[i]
+            z.counts[i] = intersect(x.counts[i], y.counts[i])
         end
         return z
     end
@@ -56,7 +69,7 @@ module lisa
         length(x.counts) == length(y.counts) || throw(ArgumentError("HllSet{P} must have same size"))
         z = HllSet{P}()
         for i in 1:length(x.counts)
-            z.counts[i] = x.counts[i] & ~y.counts[i]
+            z.counts[i] = setdiff(x.counts[i], y.counts[i])
         end
         return z
     end
@@ -69,25 +82,27 @@ module lisa
         return true
     end
 
-    function Base.hash(x::Any)  
-        hash(x)
-    end
+    Base.isempty(x::HllSet{P}) where {P} = all(isempty(i) for i in x.counts)
 
-    getbin(hll::HllSet{P}, x::UInt) where {P} = x >>> (8 * sizeof(UInt) - P) + 1
+    function getbin(hll::HllSet{P}, x::UInt) where {P} 
+        x = x >>> (8 * sizeof(UInt) - P) + 1
+        str = replace(string(x, base = 16), "0x" => "")
+        return parse(Int, str, base = 16)
+    end
 
     function getzeros(hll::HllSet{P}, x::UInt) where {P}
         or_mask = ((UInt(1) << P) - 1) << (8 * sizeof(UInt) - P)
         return trailing_zeros(x | or_mask) + 1
     end
 
-    function Base.push!(hll::HllSet, x)
+    function Base.push!(hll::HllSet{P}, x::Any) where {P}
         h = hash(x)
         bin = getbin(hll, h)
-        @inbounds hll.counts[bin] |= BitSet(1 << getzeros(hll, h))
+        union!(hll.counts[bin], BitSet(1 << getzeros(hll, h)))
         return hll
     end
 
-    function Base.push!(hll::HllSet, values...)
+    function Base.push!(hll::HllSet{P}, values...) where {P}
         for value in values
             push!(hll, value)
         end
@@ -136,5 +151,3 @@ module lisa
     end
 
     greet() = print("Hello World!")
-
-end # module lisa
