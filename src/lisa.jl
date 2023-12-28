@@ -1,3 +1,27 @@
+# This module is greatly inspired by the implementation of the HLL algorithm in the Julia library:
+# https://github.com/jakobnissen/Probably.jl/blob/master/src/hyperloglog/hyperloglog.jl
+
+# Below is the header from this file
+# From Flajolet, Philippe; Fusy, Éric; Gandouet, Olivier; Meunier, Frédéric (2007)
+# DOI: 10.1.1.76.4286
+# With algorithm improvements by Google (https://ai.google/research/pubs/pub40671)
+
+# Principle:
+# When observing N distinct uniformly distributed integers, the expected maximal
+# number of leading zeros in the integers is log(2, N), with large variation.
+# To cut variation, we keep 2^P counters, each keeping track of N/2^P
+# observations. The estimated N for each counter is averaged using harmonic mean.
+# Last, corrections for systematic bias are added, one multiplicative and one
+# additive factor.
+# To make the observations uniformly distributed integers, we hash them.
+
+# We made sugnificant changes to the original implementation:
+# - We use a BitVector instead of a UInt8 for the counters
+# - We implemented additional operators to support set operations, like union (union), intersection(intersect), difference(diff), 
+#   and equality (isequal). Now they work the same way as they work for sets
+# - We also renamed some of the original operators to be more consistent with HyperLogLog terminology
+
+
 include("constants.jl")
 
     struct HllSet{P}

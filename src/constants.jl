@@ -1,3 +1,6 @@
+# Borrowed directly from:
+# https://github.com/jakobnissen/Probably.jl/blob/master/src/hyperloglog/constants.jl
+
 # Constants here are from https://ai.google/research/pubs/pub40671
 # They have been very slightly modified.
 #
