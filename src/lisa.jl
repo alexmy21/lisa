@@ -122,7 +122,7 @@ include("constants.jl")
         end
 
     
-        function bias(::HllSet{P}, biased_estimate) where {P}
+    function bias(::HllSet{P}, biased_estimate) where {P}
         # For safety - this is also enforced in the HLL constructor
         if P < 4 || P > 18
             error("We only have bias estimates for P ∈ 4:18")
@@ -146,13 +146,13 @@ include("constants.jl")
     end
 
     function maxidx(vec::BitVector)
-        last = 0
-        for i in 1:length(vec)
+        
+        for i in length(vec):-1:1
             if vec[i]
-                last = i
+                return i
             end
         end
-        return last
+        return 0
     end
 
     function Base.length(x::HllSet{P}) where {P}
