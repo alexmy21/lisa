@@ -1,7 +1,7 @@
 include("constants.jl")
 
     struct HllSet{P}
-        counts::Vector{BitSet}
+        counts::Vector{BitVector}
 
         function HllSet{P}() where {P}
             validate_P(P)
@@ -20,7 +20,7 @@ include("constants.jl")
         end
 
         function create_bitsets(n)
-            return [BitSet() for _ in 1:n]
+            return [falses(64) for _ in 1:n]
         end
     end
 
@@ -34,7 +34,7 @@ include("constants.jl")
     function Base.union!(dest::HllSet{P}, src::HllSet{P}) where {P}
         length(dest.counts) == length(src.counts) || throw(ArgumentError("HllSet{P} must have same size"))
         for i in 1:length(dest.counts)
-            union!(dest.counts[i], src.counts[i])
+            dest.counts[i] = dest.counts[i] .| src.counts[i]
         end
         return dest
     end
@@ -51,7 +51,7 @@ include("constants.jl")
         length(x.counts) == length(y.counts) || throw(ArgumentError("HllSet{P} must have same size"))
         z = HllSet{P}()
         for i in 1:length(x.counts)
-            z.counts[i] = union(x.counts[i], y.counts[i])
+            z.counts[i] = x.counts[i] .| y.counts[i]
         end
         return z
     end
@@ -60,7 +60,7 @@ include("constants.jl")
         length(x.counts) == length(y.counts) || throw(ArgumentError("HllSet{P} must have same size"))
         z = HllSet{P}()
         for i in 1:length(x.counts)
-            z.counts[i] = intersect(x.counts[i], y.counts[i])
+            z.counts[i] = x.counts[i] .& y.counts[i]
         end
         return z
     end
@@ -69,7 +69,7 @@ include("constants.jl")
         length(x.counts) == length(y.counts) || throw(ArgumentError("HllSet{P} must have same size"))
         z = HllSet{P}()
         for i in 1:length(x.counts)
-            z.counts[i] = setdiff(x.counts[i], y.counts[i])
+            z.counts[i] = x.counts[i] .& .~(y.counts[i])
         end
         return z
     end
@@ -82,7 +82,7 @@ include("constants.jl")
         return true
     end
 
-    Base.isempty(x::HllSet{P}) where {P} = all(isempty(i) for i in x.counts)
+    Base.isempty(x::HllSet{P}) where {P} = all(x -> x == 0,  x.counts)
 
     function getbin(hll::HllSet{P}, x::UInt) where {P} 
         x = x >>> (8 * sizeof(UInt) - P) + 1
@@ -98,7 +98,8 @@ include("constants.jl")
     function Base.push!(hll::HllSet{P}, x::Any) where {P}
         h = hash(x)
         bin = getbin(hll, h)
-        union!(hll.counts[bin], BitSet(1 << getzeros(hll, h)))
+        idx = getzeros(hll, h)
+        hll.counts[bin][idx] = true
         return hll
     end
 
@@ -120,7 +121,8 @@ include("constants.jl")
             return 0.7213 / (1 + 1.079 / sizeof(x))
         end
 
-    function bias(::HllSet{P}, biased_estimate) where {P}
+    
+        function bias(::HllSet{P}, biased_estimate) where {P}
         # For safety - this is also enforced in the HLL constructor
         if P < 4 || P > 18
             error("We only have bias estimates for P ∈ 4:18")
@@ -143,9 +145,19 @@ include("constants.jl")
         end
     end
 
+    function maxidx(vec::BitVector)
+        last = 0
+        for i in 1:length(vec)
+            if vec[i]
+                last = i
+            end
+        end
+        return last
+    end
+
     function Base.length(x::HllSet{P}) where {P}
         # Harmonic mean estimates cardinality per bin. There are 2^P bins
-        harmonic_mean = sizeof(x) / sum(1 / 1 << maximum(i) for i in x.counts)
+        harmonic_mean = sizeof(x) / sum(1 / 1 << maxidx(i) for i in x.counts)
         biased_estimate = α(x) * sizeof(x) * harmonic_mean
         return round(Int, biased_estimate - bias(x, biased_estimate))
     end
