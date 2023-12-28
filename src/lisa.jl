@@ -65,7 +65,7 @@ include("constants.jl")
         return z
     end
 
-    function Base.setdiff(x::HllSet{P}, y::HllSet{P}) where {P} 
+    function Base.diff(x::HllSet{P}, y::HllSet{P}) where {P} 
         length(x.counts) == length(y.counts) || throw(ArgumentError("HllSet{P} must have same size"))
         z = HllSet{P}()
         for i in 1:length(x.counts)
@@ -155,7 +155,7 @@ include("constants.jl")
         return 0
     end
 
-    function Base.length(x::HllSet{P}) where {P}
+    function Base.count(x::HllSet{P}) where {P}
         # Harmonic mean estimates cardinality per bin. There are 2^P bins
         harmonic_mean = sizeof(x) / sum(1 / 1 << maxidx(i) for i in x.counts)
         biased_estimate = α(x) * sizeof(x) * harmonic_mean
