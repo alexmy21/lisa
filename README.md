@@ -24,7 +24,7 @@ In most implementations of HLL ([4], [5]) this collection presented as an array 
 
 Here is an algorithm to build registries (regvector) using Python as a pseudo-code:
 
-```
+```python
 # Fill registers with zeros
 # k is the power of 2 in the formula for the registers size
 registers = = [0] * 2**k
@@ -64,7 +64,7 @@ ADD — adds an element from a dataset to the registers (it is an internal part 
 
 MERGE — is using almost the same algorithm as ADD with a slight modification.
 
-```
+```python
 # dataset_1 - registers for dataset 1
 # dataset_2 - registers for dataset 2
 # out - registers for resulting dataset
@@ -110,7 +110,7 @@ From this point we are switching to Julia. The reason is simple - Julia is fast 
 
 So, here is new data structure for the registers, we'll start to call them **counters**.
 
-```
+```julia
 struct HllSet{P}
     # This is the most important change, we are replacing
     # integer (the max number of running zeros) with 
