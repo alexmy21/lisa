@@ -119,7 +119,7 @@ function getzeros(hll::HllSet{P}, x::UInt) where {P}
     return trailing_zeros(x | or_mask) + 1
 end
 
-function Base.push!(hll::HllSet{P}, x::Any) where {P}
+function add!(hll::HllSet{P}, x::Any) where {P}
     h = hash(x)
     bin = getbin(hll, h)
     idx = getzeros(hll, h)
@@ -127,13 +127,13 @@ function Base.push!(hll::HllSet{P}, x::Any) where {P}
     return hll
 end
 
-function Base.push!(hll::HllSet{P}, values...) where {P}
+function add!(hll::HllSet{P}, values::Set) where {P}
     for value in values
-        push!(hll, value)
+        add!(hll, value)
     end
     return hll
 end
-    
+
 α(x::HllSet{P}) where {P} =
     if P == 4
         return 0.673
