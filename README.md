@@ -1,9 +1,9 @@
 # LISA - HyperLogLog based approximation framework for very big Datasets
 
-> **If it looks like a duck, swims like a duck, and quacks like a duck, then it probably is a duck.**
+( **_If it looks like a duck, swims like a duck, and quacks like a duck, then it probably is a duck._** )
 
->  *This project is greatly inspired by the implementation of the HLL algorithm in the Julia library:
-> https://github.com/jakobnissen/Probably.jl/blob/master/src/hyperloglog/hyperloglog.jl* 
+>This project is greatly inspired by the implementation of the HLL algorithm in the Julia library:
+> <https://github.com/jakobnissen/Probably.jl/blob/master/src/hyperloglog/hyperloglog.jl>
 
 ## Introduction
 
