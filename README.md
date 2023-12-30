@@ -56,13 +56,13 @@ The registers building algorithm has a few very useful properties:
 2. It creates a single presentation for each dataset — if two registers vectors are different, then the corresponding datasets are different. But this is one way comparison. The same registers for the datasets do not guaranty equivalence of those datasets. So, we have a case of false positives, but we do not have a false negatives when we are comparing datasets using HLL. The datasets with different registers are not equal.
 3. (not very useful) The relation between registers and a cardinality of a dataset is not exactly straightforward. Depending on the size of the dataset the calculation formula is needed to be adjusted. It also is not very consistent for different types of data in datasets and even different types of a distribution of those data. These discrepancies are hard to correct in generic way and they are not corrected in the current implementations of HLL.
 
-## Hll operations
+## Operations in current implementations of HyperLogLog
 
 Most HLL implementation provide support for following operations:
 
-ADD — adds an element from a dataset to the registers (it is an internal part of the algorithm described above);
+**ADD** — adds an element from a dataset to the registers (it is an internal part of the algorithm described above);
 
-MERGE — is using almost the same algorithm as ADD with a slight modification.
+**MERGE** — is using almost the same algorithm as ADD with a slight modification.
 
 ```python
 # dataset_1 - registers for dataset 1
@@ -80,7 +80,7 @@ It is obvious that the sizes of all three registers vectors should be the same.
 
 MERGE operation is lossless.
 
-COUNT — is the heart of the HLL, it calculates cardinality of the dataset based on the values in the registers.
+**COUNT** — is the heart of the HLL, it calculates cardinality of the dataset based on the values in the registers.
 
 So, the union is the merge command from HyperLogLog. The original command updates (mutates) registers of a hll, the new implementation makes this operation immutable. It doesn’t change the registers of input datasets but creates new registers and a new HLL as an output. It works the same way as the merge command in Redis HLL.
 
@@ -92,21 +92,23 @@ So, it’s not a solution. Remember, each register in the registers vector serve
 
 On the other hand, the acquired result for registers in the intersection is still holds all properties of the HLL that we mentioned early:
 
-1. It is an idempotent.
-2. It creates a single presentation for each resulting dataset.
+1. It is an **idempotent**.
+2. It creates a **single presentation** for each resulting dataset.
 3. And, yes — The relation between registers and a cardinality of a dataset is not exactly straightforward.
 
 ## Fixing limitations of current implementations of HLL
 
 Even without any changes current implementations of HLL are good enough. The only intersect creates some inconvenience, but it could be resolved with inclusion/exclution formula:
 
+```sql
     card(intersect(A, B)) = (card(A) + card(B)) - card(union(A, B))
+```
 
-This way we can get cardinality of intersection of A and B datasets, but cannot get the approximated HLL set.
+This way we can get cardinality of an intersection of A and B datasets, but we cannot get the approximated HLL set by itself.
 
-The solution terned out to be very simple. All we need to do is to slightly uprade the data structures of the registers.
+The solution turned out to be very simple. All we need to do is to slightly uprade the data structures of the registers.
 
-From this point we are switching to Julia. The reason is simple - Julia is fast and it has the same convinient features (at least in our context) as Python.
+From this point we are switching to Julia. The reason is simple - Julia is fast and it has the same convenient features (at least in our context) as Python.
 
 So, here is new data structure for the registers, we'll start to call them **counters**.
 
@@ -143,9 +145,122 @@ struct HllSet{P}
 end
 ```
 
-With BitVector, we defining max number of running zeros as the bigest index in the BitVector that holds "1".
+With BitVector, we defining max number of running zeros as the biggest index in the BitVector that holds "1".
 
+## HllSet operations
 
+### Adding new items to HLL (add)
+
+There are two version for this function:
+
+1. Supports adding a single item:
+2. Supports adding multiple items as a set.
+
+```julia
+function add!(hll::HllSet{P}, x::Any) where {P}
+    h = hash(x)
+    bin = getbin(hll, h)
+    idx = getzeros(hll, h)
+    hll.counts[bin][idx] = true
+    return hll
+end
+
+function add!(hll::HllSet{P}, values::Set) where {P}
+    for value in values
+        add!(hll, value)
+    end
+    return hll
+end
+```
+
+### Union (union)
+
+Operation **union** is a substitute for the **MERGE** operation in traditional HLL implementation.
+
+```julia
+function Base.union!(dest::HllSet{P}, src::HllSet{P}) where {P}
+    length(dest.counts) == length(src.counts) || throw(ArgumentError("HllSet{P} must have same size"))
+    for i in 1:length(dest.counts)
+        dest.counts[i] = dest.counts[i] .| src.counts[i]
+    end
+    return dest
+end
+```
+
+Normally we would use **max** of two integers in 
+
+```julia
+dest.counts[i] = max(dest.counts[i], src.counts[i])
+```
+
+but with a new **struct** that represent HLL structure, we are using bitwise OR (.|) operation for BitVectors.
+
+### Intersection (intersect)
+
+Intersection is a new operation, it is possible only because we switched from **Vector(Int)** to **Vector(BitVector)** in struct definition of **counters**.
+
+```julia
+function Base.intersect(x::HllSet{P}, y::HllSet{P}) where {P} 
+    length(x.counts) == length(y.counts) || throw(ArgumentError("HllSet{P} must have same size"))
+    z = HllSet{P}()
+    for i in 1:length(x.counts)
+        z.counts[i] = x.counts[i] .& y.counts[i]
+    end
+    return z
+end
+```
+
+### Difference (diff)
+
+```julia
+function Base.diff(x::HllSet{P}, y::HllSet{P}) where {P} 
+    length(x.counts) == length(y.counts) || throw(ArgumentError("HllSet{P} must have same size"))
+    z = HllSet{P}()
+    for i in 1:length(x.counts)
+        z.counts[i] = x.counts[i] .& .~(y.counts[i])
+    end
+    return z
+end
+```
+
+### Derivative (delta)
+
+Derivatives definition from [9]:
+
+> The derivative of a function describes the function’s instantaneous rate of change at a certain point. Another common interpretation is that the derivative gives us the slope of the line tangent to the function’s graph at that point.
+
+Fundamentally all we need for implementing derivative is to implement an operation or a function that can measure changes in the HLL that is built from the given dataset.
+
+Suppose we have recorded states of the HLL at two time-points: hll(t(1)) and hll(t(2)).
+
+The difference between these two states can be described as a triple
+
+```sql
+delta(t(1), t(2)) = ( D, R, N),
+
+where
+
+D — is a cardinality of deleted items;
+R — is is a cardinality of retained items;
+N — is a cardinality of new items.
+D(t(1), t(2)) = hll(t(1)).card — ( hll(t(1)).intersect( hll(t(2))).card
+
+R(t(1), t(2)) = (hll( t(1) ).intersect(hll( t(2))).card
+
+N(t(1), t(2)) = hll(t(2)).card — (hll( t(1)).intersect( hll(t(2))).card
+```
+
+### Gradient (grad)
+
+We can also define a gradient of the changes, for example, as an euclidean distance between delta vectors (it’s not the only choice and, maybe, not the best, but we can use it as an illustration):
+
+```julia
+function grad(v1::Vector, v2::Vector)
+    return norm(v1, v2)
+end
+
+grad = grad(delta(t(1), t(2)), delta(t(2), t(3)))
+```
 
 
 
