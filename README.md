@@ -288,13 +288,13 @@ Some additional laws:
 """
 ```
 
-Source code for proving that HllSet satisfies all of these requirements you can find in notebook.jl.
+Source code for proving that HllSet satisfies all of these requirements you can find in **lisa.ipynb**.
 
 ## HllSet special cases
 
 We believe that HLL can be used for approximation of almost any type of data. Here we are providing couple special cases.
 
-In **notebook.jl** you can find a demonstration of using HLL to approximate image files. This code is just a demo and the purpose of it is to prove that we can approximate image into HLL.
+In **lisa.ipynb** you can find a demonstration of using HLL to approximate image files. This code is just a demo and the purpose of it is to prove that we can approximate image into HLL.
 
 In addition this code also demonstrates that we can combine images and texts in a single HLL (test_image.py). To run this code you need to use your own images (batteries are not included).
 
@@ -320,7 +320,7 @@ Two HllSets (hll_1 and hll_2) are connected from hll_1 to hll_2, if the followin
 
 Threshold is a value from [0, 1]. Normally it should be greater than 0.5 at least, but in some cases it could be lower.
 
-Source code for this demo you can find in **notebook.jl** as well.
+Source code for this demo you can find in **lisa.ipynb** as well.
 
 ![Alt text](1_8OoE-wb-4zHDcvWWq2_7xQ.webp)
 
