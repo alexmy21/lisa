@@ -1,4 +1,4 @@
-# LISA - HyperLogLog based approximation framework for very big Datasets
+# LISA: HyperLogLog based approximation framework for very big Datasets
 
 ( **_If it looks like a duck, swims like a duck, and quacks like a duck, then it probably is a duck._** )
 
@@ -110,7 +110,7 @@ The solution turned out to be very simple. All we need to do is to slightly upra
 
 From this point we are switching to Julia. The reason is simple - Julia is fast and it has the same convenient features (at least in our context) as Python.
 
-So, here is new data structure for the registers, we'll start to call them **counters**.
+So, here is a new data structure for the registers, we'll start to call them **counters**.
 
 ```julia
 struct HllSet{P}
@@ -149,7 +149,7 @@ With BitVector, we defining max number of running zeros as the biggest index in 
 
 ## HllSet operations
 
-### Adding new items to HLL (add)
+### 1. Adding new items to HLL (add)
 
 There are two version for this function:
 
@@ -173,7 +173,7 @@ function add!(hll::HllSet{P}, values::Set) where {P}
 end
 ```
 
-### Union (union)
+### 2. Union (union)
 
 Operation **union** is a substitute for the **MERGE** operation in traditional HLL implementation.
 
@@ -195,7 +195,7 @@ dest.counts[i] = max(dest.counts[i], src.counts[i])
 
 but with a new **struct** that represent HLL structure, we are using bitwise OR (.|) operation for BitVectors.
 
-### Intersection (intersect)
+### 3. Intersection (intersect)
 
 Intersection is a new operation, it is possible only because we switched from **Vector(Int)** to **Vector(BitVector)** in struct definition of **counters**.
 
@@ -210,7 +210,7 @@ function Base.intersect(x::HllSet{P}, y::HllSet{P}) where {P}
 end
 ```
 
-### Difference (diff)
+### 4. Difference (diff)
 
 ```julia
 function Base.diff(x::HllSet{P}, y::HllSet{P}) where {P} 
@@ -223,7 +223,7 @@ function Base.diff(x::HllSet{P}, y::HllSet{P}) where {P}
 end
 ```
 
-### Derivative (delta)
+### 5. Derivative (delta)
 
 Derivatives definition from [9]:
 
@@ -250,7 +250,7 @@ R(t(1), t(2)) = (hll( t(1) ).intersect(hll( t(2))).card
 N(t(1), t(2)) = hll(t(2)).card — (hll( t(1)).intersect( hll(t(2))).card
 ```
 
-### Gradient (grad)
+### 6. Gradient (grad)
 
 We can also define a gradient of the changes, for example, as an euclidean distance between delta vectors (it’s not the only choice and, maybe, not the best, but we can use it as an illustration):
 
@@ -262,6 +262,50 @@ end
 grad = grad(delta(t(1), t(2)), delta(t(2), t(3)))
 ```
 
+## HllSet special cases
 
+We believe that HLL can be used for approximation of almost any type of data. Here we are providing couple special cases.
+
+In **notebook.jl** you can find a demonstration of using HLL to approximate image files. This code is just a demo and the purpose of it is to prove that we can approximate image into HLL.
+
+In addition this code also demonstrates that we can combine images and texts in a single HLL (test_image.py). To run this code you need to use your own images (batteries are not included).
+
+## Relations on collection of HllSets
+
+As we learned, HllSet encapsulates dataset into fixed size regvector of ranks (max numbers of running zeros in the hash that starts with bits representing register index). There is no direct way to restore the original dataset values from the HllSet registers vector.
+
+However, one thing is still given, any changes in the original dataset will most likely affect a corresponding HllSet. So, even we cannot manage the datasets content that we used to generate HllSets but we can perform some operations and measure their changes using proposed operations on HLLs.
+
+We will touch only some binary relations on a collection of HllSets, specifically:
+
+- directed and
+- undirected
+
+graphs.
+
+### Directed Graphs
+
+Two HllSets (hll_1 and hll_2) are connected from hll_1 to hll_2, if the following statements are true:
+
+1. hll_1.dependence(hll_2) > hll_2.dependence(hll_1)
+2. hll_1.dependence(hll_2) > threshold.
+
+Threshold is a value from [0, 1]. Normally it should be greater than 0.5 at least, but in some cases it could be lower.
+
+Source code for this demo you can find in **notebook.jl** as well.
 
 ![Alt text](1_8OoE-wb-4zHDcvWWq2_7xQ.webp)
+
+### Undirected Graph
+
+The building of undirected graphs uses almost the same code, but with the tolerance operator:
+
+hll_1.tolerance(hll_2) > threshold (threshold = 0.3).
+
+![Alt text](1_eDOCzP3eXtt69eiIOpENTQ.png)
+
+## Summary
+
+The purpose of this project is to offer you a slightly different perspective on a well-known computing phenomenon - HyperLogLog. We believe that the scope of HyperLogLog is much wider than just calculating the cardinality of a set.
+
+Essentially, we can do most of the analytical work without accessing the actual data, but using the HLL representation of it. Such operations include searching for data, constructing structural groupings, assessing the proximity of distributions of values ​​in compared sets, etc.
