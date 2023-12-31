@@ -82,7 +82,7 @@ MERGE operation is lossless.
 
 **COUNT** — is the heart of the HLL, it calculates cardinality of the dataset based on the values in the registers.
 
-So, the union is the merge command from HyperLogLog. The original command updates (mutates) registers of a hll, the new implementation makes this operation immutable. It doesn’t change the registers of input datasets but creates new registers and a new HLL as an output. It works the same way as the merge command in Redis HLL.
+So, the union is the merge command from HyperLogLog. It is immutable. It doesn’t change the counters of the input datasets but creates a new HllSet as an output.
 
 The **intersect** command is missing in all implementations that I aware of. And there are reasons for this absence. The “obvious” solution to replace max in union with min in intersect doesn’t work. Applying cardinality command to intersection obtained with this “solution” will always return greater estimate of the cardinality — in average around 2 times greater.
 
@@ -261,6 +261,34 @@ end
 
 grad = grad(delta(t(1), t(2)), delta(t(2), t(3)))
 ```
+
+## Proving that HllSet is a Set
+
+The operations on sets should satisfy following properties [7]:
+
+```julia
+"""
+Fundamental properties:
+    Commutative property
+                1. (A ∪ B) = (B ∪ A)
+                2. (A ∩ B) = (B ∩ A)
+        Associative property
+                3. (A ∪ B) ∪ C) = (A ∪ (B ∪ C))
+                4. (A ∩ B) ∩ C) = (A ∩ (B ∩ C))
+        Distributive property:
+                5. ((A ∪ B) ∩ C) = (A ∩ C) ∪ (B ∩ C)
+                6. ((A ∩ B) + C) = (A + C) ∩ (B + C)
+        Identity:
+                7. (A ∪ Z) = A
+                8. (A ∩ U) = A
+Some additional laws:        
+        Idempotent laws:
+                9. (A ∪ A) = A
+                10. (A ∩ U) = A
+"""
+```
+
+Source code for proving that HllSet satisfies all of these requirements you can find in notebook.jl.
 
 ## HllSet special cases
 
