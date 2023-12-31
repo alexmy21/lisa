@@ -309,3 +309,15 @@ hll_1.tolerance(hll_2) > threshold (threshold = 0.3).
 The purpose of this project is to offer you a slightly different perspective on a well-known computing phenomenon - HyperLogLog. We believe that the scope of HyperLogLog is much wider than just calculating the cardinality of a set.
 
 Essentially, we can do most of the analytical work without accessing the actual data, but using the HLL representation of it. Such operations include searching for data, constructing structural groupings, assessing the proximity of distributions of values ​​in compared sets, etc.
+
+## References
+
+1. https://en.wikipedia.org/wiki/HyperLogLog
+2. https://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf
+3. https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/40671.pdf
+4. https://redis.io/docs/data-types/probabilistic/hyperloglogs/
+5. https://github.com/ascv/HyperLogLog/blob/master/README.md
+6. https://en.wikipedia.org/wiki/Inclusion%E2%80%93exclusion_principle
+7. https://en.wikipedia.org/wiki/Algebra_of_sets
+8. https://github.com/karpathy/micrograd
+9. https://www.khanacademy.org/math/differential-calculus/dc-diff-intro
