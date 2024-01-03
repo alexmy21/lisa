@@ -277,7 +277,7 @@ Fundamental properties:
                 4. (A ∩ B) ∩ C) = (A ∩ (B ∩ C))
         Distributive property:
                 5. ((A ∪ B) ∩ C) = (A ∩ C) ∪ (B ∩ C)
-                6. ((A ∩ B) + C) = (A + C) ∩ (B + C)
+                6. ((A ∩ B) ∪ C) = (A ∪ C) ∩ (B ∪ C) 
         Identity:
                 7. (A ∪ Z) = A
                 8. (A ∩ U) = A
@@ -349,3 +349,4 @@ Essentially, we can do most of the analytical work without accessing the actual 
 7. https://en.wikipedia.org/wiki/Algebra_of_sets
 8. https://github.com/karpathy/micrograd
 9. https://www.khanacademy.org/math/differential-calculus/dc-diff-intro
+10. https://www.academia.edu/67413396/How_Various_Irrationalities_Proven_to_be_Rational?email_work_card=view-paper    

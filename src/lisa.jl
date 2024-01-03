@@ -185,3 +185,12 @@ function Base.count(x::HllSet{P}) where {P}
     biased_estimate = α(x) * sizeof(x) * harmonic_mean
     return round(Int, biased_estimate - bias(x, biased_estimate))
 end
+
+function delta(hll_1::HllSet{P}, hll_2::HllSet{P}) where {P}
+    x = count(intersect(hll_1, hll_2))
+    d = count(hll_1) - x
+    r = x
+    n = count(hll_2) - x
+
+    return (D = d, R = r, N = n)
+end
