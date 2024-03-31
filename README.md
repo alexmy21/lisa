@@ -1,3 +1,6 @@
+>This project is discontinued and moved to new repository:
+>https://github.com/alexmy21/lisa_meta
+
 # LISA: HyperLogLog based approximation framework for very big Datasets
 
 ( **_If it looks like a duck, swims like a duck, and quacks like a duck, then it probably is a duck._** )
